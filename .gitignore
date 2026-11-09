@@ -1,0 +1,45 @@
+# 密钥：只提交 .env.example，真实 .env 留在本机
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*token*.json
+*secret*.json
+credentials.json
+cookies.txt
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# 运行产物（G 代码与报告保留策略由使用者决定，默认不入库）
+output/*
+!output/.gitkeep
+
+# 模型权重与大体积素材（YOLO / 视频帧，不入库）
+*.pt
+*.pth
+*.onnx
+*.engine
+*.mp4
+*.avi
+
+# 编辑器与系统垃圾文件
+.vscode/
+.idea/
+.workbuddy/
+Thumbs.db
+.DS_Store
+
+# 机床侧文件
+*.bak.nc
+*.log
+# 但 examples/ 下的示例报警日志是离线测试数据，必须保留
+!examples/*.log

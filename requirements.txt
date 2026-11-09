@@ -1,0 +1,16 @@
+# 运行库：核心链路只用标准库 + numpy（体素仿真 / 合成画面 / PNG 编码）
+numpy>=1.24
+
+# ---- 以下全部为可选依赖，不装也能完整跑通离线演示 ----
+# 摄像头 / RTSP / 视频帧源
+# opencv-python>=4.8
+# 图片序列帧源
+# pillow>=10.0
+# 真实 YOLO 检测（需自训练机加工故障权重）
+# ultralytics>=8.0
+# 工业协议真实写入（默认 dry-run，无需安装）
+# pymodbus>=3.0
+# opcua>=0.98
+# paho-mqtt>=2.0
+
+# LLM 用 urllib 直连 OpenAI 兼容 HTTP 接口，无需 SDK；测试用标准库 unittest。

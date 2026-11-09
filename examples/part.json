@@ -1,0 +1,11 @@
+{
+  "name": "法兰连接板",
+  "material": "6061",
+  "stock": { "x": 120, "y": 80, "z": 25 },
+  "features": [
+    { "kind": "face", "depth": 0.5, "width": 120, "height": 80, "tolerance": 0.1 },
+    { "kind": "circle_pocket", "depth": 4, "diameter": 40, "cx": -25, "cy": 0, "tolerance": 0.05, "surface_roughness": 1.6 },
+    { "kind": "rect_pocket", "depth": 3, "width": 36, "height": 26, "cx": 30, "cy": 12, "corner_radius": 4, "tolerance": 0.08 },
+    { "kind": "hole", "depth": 12, "diameter": 8, "cx": 30, "cy": -22, "finish_pass": false }
+  ]
+}
