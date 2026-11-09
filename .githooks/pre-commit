@@ -1,0 +1,17 @@
+#!/bin/sh
+# 提交前密钥闸门：暂存区含疑似真实凭据时拒绝提交。
+# 启用方式（每个 clone 各执行一次）：git config core.hooksPath .githooks
+if command -v python >/dev/null 2>&1; then
+  PY=python
+elif command -v py >/dev/null 2>&1; then
+  PY="py -3"
+else
+  echo "[secrets] 未找到 python，无法执行密钥扫描，拒绝提交。" >&2
+  exit 1
+fi
+
+$PY scripts/check_secrets.py --staged || {
+  echo "" >&2
+  echo "[secrets] 提交被拒绝。把密钥放进本机 .env（已被忽略），仓库只留空占位符。" >&2
+  exit 1
+}

@@ -9,6 +9,15 @@
 
 ---
 
+## 零、密钥私密策略（公开仓库必读）
+
+- 真实密钥**只放本机 `.env`**（已被 `.gitignore` 忽略，绝不入库）；仓库里只有 `.env.example`，其中所有 KEY / TOKEN 项均为空值。
+- 代码只从环境变量读取 `LLM_API_KEY` / `PANEL_TOKEN`，以 `Authorization` 请求头发送；日志、报告、面板响应一律用 `masked_key()` 打码（前缀 3 + 后缀 2 + 长度），不回显明文。
+- **提交前自动闸门**：仓库自带 `scripts/check_secrets.py` 与 `.githooks/pre-commit`。每个 clone 执行一次 `git config core.hooksPath .githooks` 即启用；暂存区出现疑似真实凭据（或 `.env`、私钥、凭据文件）会直接拒绝提交。手动全量扫：`python scripts/check_secrets.py`。
+- 密钥一旦被提交过，删文件无效：**先去平台吊销重发**，再清理 Git 历史。
+
+---
+
 ## 一、对原始方案的架构优化（最重要的改动）
 
 原方案让大模型**直接生成 G 代码**，再用校验器兜底。这里改成了：
@@ -80,7 +89,9 @@ python main.py drawing-schema                    # 导出图纸 OCR 抽取模板
 python main.py from-drawing                      # 内置示例工程图 -> G 代码全链路
 python main.py from-drawing --file 图纸.dxf --machine robodrill_d21 --deliver usb
 python main.py from-drawing --analyze-only       # 只识别图纸、导出 SVG/JSON，不生成程序
-python -m unittest discover -s tests -v          # 49 项回归测试（含 15 项安全/正确性加固回归）
+python -m unittest discover -s tests -v          # 56 项回归测试（含 15 项安全/正确性加固 + 7 项密钥私密回归）
+python scripts/check_secrets.py                 # 全仓密钥扫描（提交前自动跑）
+git config core.hooksPath .githooks            # 启用提交前密钥闸门
 ```
 
 **接入真实大模型**：复制 `.env.example` 为 `.env`，填 `LLM_API_KEY`（支持任意 OpenAI 兼容端点）。
@@ -160,7 +171,7 @@ COCO 权重不适用本项目，需用机加工故障数据集自训练（类别
 | 幻觉注入演示 | 参数层夹紧 **6 项**（S30000/F9000/ap25 → 回退推荐值），代码层校验拦截 **6 项**；第 2 轮重生成后双关卡 PASS |
 | 视觉监控 | **145 帧 / 6 起事件 / 6 类故障各 1 次**，零误报零漏报，全部落在预设场景帧内 |
 | 完整闭环 | 18 条控制信号批准、1 条急停被拦截；修订程序双关卡 PASS，程序 SHA 变化证明确实重编程 |
-| 回归测试 | `49 tests, OK`，耗时约 5.6 s；面板自检 57/57、前端无头 12/12 |
+| 回归测试 | `56 tests, OK`，耗时约 4.5 s；面板自检 57/57、前端无头 12/12 |
 
 ---
 
@@ -223,7 +234,10 @@ H:\cncshijue
 │       ├── protocols.py        Modbus TCP / OPC UA / MQTT / dry-run
 │       └── closed_loop.py      闭环编排 + 闭环 HTML 报告
 ├── examples/                   多特征零件 JSON / 旧程序 / 报警日志
-├── tests/test_pipeline.py      含 9 项 G 代码加固回归（共 49 项 unittest）
+├── tests/test_pipeline.py      含 9 项 G 代码加固回归
+├── tests/test_secrets.py       7 项密钥私密回归（共 56 项 unittest）
+├── scripts/check_secrets.py    提交前密钥扫描器
+├── .githooks/pre-commit        提交闸门（clone 后需 git config core.hooksPath .githooks）
 └── output/                     G 代码、报告、日志、截图、指纹清单
 ```
 
@@ -269,7 +283,7 @@ panel\start_local.bat
 ```bash
 python panel/selftest.py --full --readonly   # 57 项
 node panel/headless_check.js                 # 12 项，需 Node 18+
-python -m unittest discover -s tests         # 49 项
+python -m unittest discover -s tests         # 56 项
 ```
 
 > 已知坑已修复：`/api/tasks` 曾在持有 `_TASKS_LOCK` 时调用同样加锁的 `_task_public()` 自死锁，

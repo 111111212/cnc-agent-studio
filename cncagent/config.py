@@ -100,9 +100,13 @@ def get_settings() -> Settings:
 
 
 def masked_key(key: str) -> str:
-    """日志/报告里只显示打码后的密钥，绝不回显明文。"""
+    """日志/报告/前端只显示打码后的密钥，绝不回显明文。
+
+    公开仓库的报告与面板响应也会带上这个值，前后缀留得太多等于泄露
+    大半个密钥；统一只给「前缀 3 + 后缀 2 + 长度」，不输出连续明文片段。
+    """
     if not key:
         return "(未配置)"
-    if len(key) <= 10:
+    if len(key) <= 8:
         return f"*({len(key)} 字符)"
-    return f"{key[:6]}{'*' * 8}{key[-4:]} (长度 {len(key)})"
+    return f"{key[:3]}***{key[-2:]} (长度 {len(key)})"

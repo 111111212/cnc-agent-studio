@@ -32,7 +32,7 @@
 
 | 阶段 | 内容 | 准入条件 | 验收标准 | 回退 |
 |---|---|---|---|---|
-| **0 本地虚拟网关验证** | `plc_sim.py` 起虚拟机床，面板连 `127.0.0.1:15020`，跑连接/遥测/指令/程序下发/审计 | 代码冻结 + 49 项单测全绿 | 所有 API 实测通过；急停软写被拒绝；写后读回一致；审计完整 | 停服务即可，无现场影响 |
+| **0 本地虚拟网关验证** | `plc_sim.py` 起虚拟机床，面板连 `127.0.0.1:15020`，跑连接/遥测/指令/程序下发/审计 | 代码冻结 + 56 项单测全绿 | 所有 API 实测通过；急停软写被拒绝；写后读回一致；审计完整 | 停服务即可，无现场影响 |
 | **1 内网只读遥测** | 部署到车间工控机，`PANEL_ALLOW_WRITE=0`，只连读寄存器 | 电气图 / PLC 变量表核对签字；确认无公网入口；`PANEL_TOKEN` 已设 | 连续 72h 遥测稳定；心跳可判活；无任何写帧 | 断开连接，机床侧无感 |
 | **2 受控写入试运行** | 开 `PANEL_ALLOW_WRITE=1`，只放行进给保持 / 倍率 / 循环停止；空运行 → 单段 → 低倍率 | 双人确认制度、硬件急停有效、看门狗超时自动进给保持、完成一次急停演练 | 每条写入有审计 + 读回校验；限速与白名单拦截生效 | 立即 `PANEL_ALLOW_WRITE=0` 并重启面板 |
 | **3 DNC 程序下发 + 视觉闭环** | 开放程序缓冲下发；视觉建议进待确认队列，人工逐条放行 | 程序双人复核、M30/M02 校验、SHA 留痕；AI 建议禁止自动执行 | 程序段数/字节数读回一致；修订程序双关卡 PASS | 清空程序缓冲区，切回 U 盘拷贝 |
@@ -160,7 +160,8 @@ set PANEL_ALLOW_WRITE=1 && python panel/server.py
 
 ## 六、验收测试清单（上线前逐项打勾）
 
-- [ ] `python -m unittest discover -s tests` → 49 项全绿
+- [ ] `python -m unittest discover -s tests` → 56 项全绿
+- [ ] `git config core.hooksPath .githooks` 已启用、`python scripts/check_secrets.py` 无命中；真实密钥只在本机 `.env`，仓库内 `.env.example` 全为空值
 - [ ] `/api/health` 返回 `readonly=false`、`machine_linked=true`、`control_mode` 状态正确
 - [ ] 连接非私网地址被拒绝并留下 `connect_rejected` 审计
 - [ ] 只读连接下所有写指令返回拒绝（服务端总开关关闭 / 连接未勾选）
@@ -255,7 +256,7 @@ PANEL_MODE=readonly PANEL_ALLOW_WRITE=0 PANEL_TOKEN=<令牌> python panel/server
 
 | 项目 | 结果 |
 |---|---|
-| 单元测试 | `49 tests, OK`（原 34 + 新增 15 项加固回归） |
+| 单元测试 | `56 tests, OK`（原 34 + 15 项加固回归 + 7 项密钥私密回归） |
 | 面板自检 | `python panel/selftest.py --full --readonly` → **57/57 PASS** |
 | 前端无头 | `node panel/headless_check.js` → **12/12 PASS** |
 | 三方言双关卡 | FANUC 70 段 / SIEMENS 83 段 / HNC 68 段，校验 0 错、仿真 0 问题 |
