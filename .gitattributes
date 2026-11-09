@@ -1,0 +1,14 @@
+# 行尾策略：G 代码 / DXF / 日志按原始字节保存，禁止 CRLF 转换。
+# 机床 DNC 下发对字节敏感：换行被改写会让程序 SHA 与准入凭证不一致。
+*          text=auto
+*.nc       -text
+*.dxf      -text
+*.log      -text
+*.bat      text eol=crlf
+
+# 二进制资产（YOLO 权重、视觉帧），不做任何文本处理
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.pt       binary
+*.onnx     binary
