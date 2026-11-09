@@ -6,6 +6,10 @@
 *.log      -text
 *.bat      text eol=crlf
 
+# shell 脚本必须 LF：CRLF 会把 shebang 变成 /bin/sh\r，Linux/Mac 上 hook 会失效
+*.sh       text eol=lf
+.githooks/* text eol=lf
+
 # 二进制资产（YOLO 权重、视觉帧），不做任何文本处理
 *.png      binary
 *.jpg      binary
