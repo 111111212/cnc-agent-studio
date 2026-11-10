@@ -350,7 +350,11 @@ scripts\push_mirror.bat            # Windows 命令行，自动定位 Git Bash
 | 凭据 | 运行时从本机 Git 凭据管理器读取（`x-access-token` 键，`scope=repo`）；不写 URL、不写 `.git/config`、不落盘、不回显明文 |
 | 闸门 | 推送前先跑 `scripts/check_secrets.py`，命中即终止 |
 | 校验 | 推送后回读 `ls-remote`，与本地 HEAD 比对 |
-| 实测 | 远端 `main` 与本地 HEAD 同 SHA，4 提交 / 52 文件 / 无 `.env` / `.env.example` 入库 |
+| 实测 | 远端 `main` 与本地 HEAD 同 SHA，密钥闸门 0 命中，无 `.env`、`.env.example` 入库 |
+
+> **镜像缓存滞后**：镜像的 `receive-pack` advertisement 可能停在旧 SHA，重复推送会报
+> `cannot lock ref ... but expected <旧 SHA>`。脚本因此先用 GitHub API 读取真实分支 SHA：
+> 已同步直接跳过，未同步时附带 `Cache-Control: no-cache` 推送；仍失败可稍后重试或换 `CNC_MIRROR`。
 
 可用 `CNC_REPO`、`CNC_BRANCH`、`CNC_MIRROR` 覆盖默认值。镜像都不可用时，退回离线方案
 `output/cnc-agent-studio.bundle` + `output/push_from_bundle.bat`，拷到能直连 GitHub 的机器执行。

@@ -33,15 +33,33 @@ if [ -z "$TOKEN" ]; then
 fi
 echo "[push_mirror] 凭据已加载: [len=${#TOKEN}, prefix=${TOKEN:0:4}****]"
 
-# 3) 用 http.extraHeader 注入 Basic 认证，仅对本次命令生效（环境变量注入，不落盘）
+# 3) 先经 GitHub API 读远端真实 SHA。镜像的 receive-pack advertisement 可能缓存滞后，
+#    拿旧 SHA 当 old 值会让 GitHub 报 "cannot lock ref"；已同步则直接跳过，不做无谓推送。
+LOCAL_SHA="$(git rev-parse HEAD)"
+REMOTE_SHA="$(curl -sS --max-time 12 -H "Authorization: Bearer $TOKEN" \
+    "https://api.github.com/repos/$REPO/branches/$BRANCH" 2>/dev/null \
+  | python -c 'import sys,json
+try:
+    print(json.load(sys.stdin)["commit"]["sha"])
+except Exception:
+    print("")' 2>/dev/null)"
+if [ -n "$REMOTE_SHA" ] && [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
+  echo "[push_mirror] 远端 $BRANCH 已是 ${LOCAL_SHA:0:7}，无需推送。"
+  exit 0
+fi
+[ -n "$REMOTE_SHA" ] && echo "[push_mirror] 远端 ${REMOTE_SHA:0:7} -> 本地 ${LOCAL_SHA:0:7}"
+
+# 4) 注入认证头 + 禁缓存头，仅对本次命令生效（环境变量注入，不落盘、不写 .git/config）
 BASIC="$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
 export GIT_TERMINAL_PROMPT=0
 export GCM_INTERACTIVE=Never
-export GIT_CONFIG_COUNT=2
+export GIT_CONFIG_COUNT=3
 export GIT_CONFIG_KEY_0=http.extraHeader
 export GIT_CONFIG_VALUE_0="Authorization: Basic $BASIC"
-export GIT_CONFIG_KEY_1=credential.helper
-export GIT_CONFIG_VALUE_1=
+export GIT_CONFIG_KEY_1=http.extraHeader
+export GIT_CONFIG_VALUE_1="Cache-Control: no-cache"
+export GIT_CONFIG_KEY_2=credential.helper
+export GIT_CONFIG_VALUE_2=
 
 URL="$MIRROR/$REPO.git"
 echo "[push_mirror] 通道: $(printf '%s' "$URL" | cut -d/ -f3) -> $REPO ($BRANCH)"
@@ -50,11 +68,13 @@ git -c http.version=HTTP/1.1 -c http.lowSpeedLimit=1 -c http.lowSpeedTime=30 \
   | sed -E 's/(Authorization: Basic )[A-Za-z0-9=+\/]+/\1[MASKED]/g'
 RC=${PIPESTATUS[0]}
 if [ "$RC" -ne 0 ]; then
-  echo "[push_mirror] 推送失败 (exit=$RC)。可换镜像重试：CNC_MIRROR=https://<mirror>/https://github.com $0"
+  echo "[push_mirror] 推送失败 (exit=$RC)。"
+  echo "  - cannot lock ref: 镜像 advertisement 缓存滞后，稍后重试或换 CNC_MIRROR"
+  echo "  - 换镜像: CNC_MIRROR=https://<mirror>/https://github.com $0"
   exit "$RC"
 fi
 
-# 4) 回读远端 refs 校验，避免「推送成功但内容不一致」
+# 5) 回读远端 refs 校验，避免「推送成功但内容不一致」
 echo "[push_mirror] 远端 refs:"
 timeout 30 git -c http.version=HTTP/1.1 ls-remote "$URL" "refs/heads/$BRANCH"
 echo "[push_mirror] 完成: https://github.com/$REPO"
