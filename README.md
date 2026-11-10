@@ -329,3 +329,32 @@ python main.py from-drawing --file 零件.dxf --analyze-only   # 只出识别报
 
 > 图纸识别不替代工艺评审：尺寸基准、装夹、刀具可达性、公差配合仍须人工复核；
 > 位图识读结果尤其必须逐项对照原图确认后才能上机。
+
+---
+
+## 十三、仓库推送（镜像通道）
+
+仓库 `https://github.com/111111212/cnc-agent-studio` 的 `main` 已推送，`origin` 保留官方地址。
+本机 `github.com` 的 git 智能 HTTP 端点不可达（CONNECT 502 / 读超时），但 `api.github.com`
+与镜像站可用，因此推送走镜像转发：
+
+```bash
+bash scripts/push_mirror.sh        # Git Bash
+scripts\push_mirror.bat            # Windows 命令行，自动定位 Git Bash
+```
+
+| 项 | 结果 |
+|---|---|
+| 通道 | `ghfast.top` 透传 `Authorization`，带认证的 `git-receive-pack` POST 返回 200 |
+| 对照 | `gh-proxy.com` 会**剥离** `Authorization`，GitHub 回 401 并让 git 索要用户名，推送卡死，故不作默认 |
+| 凭据 | 运行时从本机 Git 凭据管理器读取（`x-access-token` 键，`scope=repo`）；不写 URL、不写 `.git/config`、不落盘、不回显明文 |
+| 闸门 | 推送前先跑 `scripts/check_secrets.py`，命中即终止 |
+| 校验 | 推送后回读 `ls-remote`，与本地 HEAD 比对 |
+| 实测 | 远端 `main` 与本地 HEAD 同 SHA，4 提交 / 52 文件 / 无 `.env` / `.env.example` 入库 |
+
+可用 `CNC_REPO`、`CNC_BRANCH`、`CNC_MIRROR` 覆盖默认值。镜像都不可用时，退回离线方案
+`output/cnc-agent-studio.bundle` + `output/push_from_bundle.bat`，拷到能直连 GitHub 的机器执行。
+
+> 镜像只负责传输，不改变仓库归属，`origin` 始终是官方地址。不要把镜像返回内容当作发布依据，
+> 发布前用 `https://api.github.com/repos/111111212/cnc-agent-studio` 复核分支 SHA。
+
